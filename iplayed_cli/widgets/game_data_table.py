@@ -43,7 +43,7 @@ class GameDataTableBase(Widget):
         if not self.table.row_count:
             return None
         coord = self.table.cursor_coordinate
-        if not coord:
+        if not self.table.is_valid_coordinate(coord):
             return None
         key = self.table.coordinate_to_cell_key(coord).row_key.value
         return next((d for d in self.data if d.game.id == key), None)
@@ -86,9 +86,9 @@ class GameDataTableBase(Widget):
     def action_edit_completion(self) -> None:
         if not self.table.has_focus:
             return
-        game_id = self.table.coordinate_to_cell_key(self.table.cursor_coordinate).row_key.value
-        data = next((c for c in self.data if c.game.id == game_id), None)
-        if not data:
+        data = self.get_selected_entry()
+        if data is None:
+            self.notify("No game selected. Press F to search for a game to add.", severity="warning")
             return
         self.app.push_screen(DataEntryScreen(data=data), self.on_data_entry_view_close)
 
@@ -145,9 +145,14 @@ class CompletionsTable(GameDataTableBase):
     def action_delete(self) -> None:
         if not self.table.has_focus:
             return
-        game_id = self.table.coordinate_to_cell_key(self.table.cursor_coordinate).row_key.value
-        self.data = completions_db.delete_completion(game_id)
+        data = self.get_selected_entry()
+        if data is None:
+            self.notify("No game selected to delete.", severity="warning")
+            return
+        self.data = completions_db.delete_completion(data.game.id)
         self.load(self.data, self.table.cursor_row)
+        if not self.data:
+            self.notify("No games left in the list. Press F to search for a game to add.")
 
 
 class RemoteResultsTable(GameDataTableBase):

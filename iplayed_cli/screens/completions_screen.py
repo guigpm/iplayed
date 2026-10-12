@@ -73,6 +73,7 @@ class CompletionsScreen(Screen):
 
     async def remote_search(self, query: str) -> None:
         if len(query) == 0:
+            self.query_one("#filter_input", Input).focus()
             return
         # Show loading indicator
         table = self.remote_table()
@@ -86,6 +87,11 @@ class CompletionsScreen(Screen):
         remote = [DataEntry.from_base_igdb_game(game) for game in remote_results]
         self.last_search_results = remote
         table.load(remote)
+        if remote:
+            table.focus()
+        else:
+            self.notify("No games found on IGDB. Try another search.", severity="warning")
+            self.query_one("#filter_input", Input).focus()
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         query = event.value.strip()
@@ -95,7 +101,8 @@ class CompletionsScreen(Screen):
         results = self.local_search(query)
         if len(results) == 0:
             await self.remote_search(query)
-        self.completions_table().focus()
+        else:
+            self.completions_table().focus()
 
     async def action_force_remote_search(self) -> None:
         """Force a remote search using the current input value, even if skipped before."""
@@ -104,7 +111,6 @@ class CompletionsScreen(Screen):
         if len(query) == 0:
             return
         await self.remote_search(query)
-        self.completions_table().focus()
 
     def action_quit(self) -> None:
         input_widget = self.query_one("#filter_input", Input)
